@@ -1,35 +1,30 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
-function App() {
-  const [count, setCount] = useState(0)
-
+import React from "react";
+import Navbar from "./components/NavBar/index";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import "./App.css";
+const App: React.FC = () => {
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <Box my={4} alignItems="center" gap={4} p={2}>
+      <Navbar />
+      <br />
 
-export default App
+      <Typography
+        variant="overline"
+        component="div"
+        sx={{ flexGrow: 1, fontSize: "1.5rem" }}
+      >
+        This Wallet has support for 2 Blockchains
+      </Typography>
+
+      <Stack spacing={2} direction="row">
+        <Button variant="outlined">Solana</Button>
+        <Button variant="outlined">Ethereum</Button>
+      </Stack>
+    </Box>
+  );
+};
+
+export default App;
