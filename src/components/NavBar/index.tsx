@@ -8,12 +8,14 @@ import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet"; // Import the new icon
+import { useNavigate } from "react-router-dom";
 
 export default function Navbar() {
   const [auth, setAuth] = React.useState(false);
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setAuth(event.target.checked);
   };
+  const navigate = useNavigate();
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -26,12 +28,15 @@ export default function Navbar() {
               aria-label="login switch"
             />
           }
-          label={auth ? "Sorry..." : "Click"}
+          label={auth ? "Hide" : "Socials"}
         />
       </FormGroup>
       <AppBar position="static" color="transparent">
         <Toolbar>
           <IconButton
+            onClick={() => {
+              navigate("/");
+            }}
             size="large"
             edge="start"
             color="inherit"
@@ -55,7 +60,7 @@ export default function Navbar() {
             Y@K Wallet
           </Typography>
 
-          {auth && <div>Follow my socials...</div>}
+          {auth && <div>Socials</div>}
         </Toolbar>
       </AppBar>
     </Box>
