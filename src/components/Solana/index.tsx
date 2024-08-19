@@ -11,24 +11,29 @@ import AppsIcon from "@mui/icons-material/Apps";
 import IconButton from "@mui/material/IconButton";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import { generateMnemonic, validateMnemonic } from "bip39";
+import DeleteModal from "../common/DeleteAllModal";
+import { useNavigate } from "react-router-dom";
+import { deriveKeyPair } from "../common/utils";
 
-// Define the Wallet type
 interface Wallet {
   publicKey: string;
   privateKey: string;
 }
 
 const Solana: React.FC = () => {
+  const navigate = useNavigate();
+
   const [seed, setSeed] = useState<string>("");
-  const [publicKey, setPublicKey] = useState<string>("");
-  const [privateKey, setPrivateKey] = useState<string>("");
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
+  const [walletToDelete, setWalletToDelete] = useState<number | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<boolean[]>(
     wallets.map(() => false)
   );
+  const [walletNo, setWalletNo] = useState<number>(-1);
   const [gridView, setGridView] = useState<boolean>(false);
-
-  // Toggle visibility of private key
+  const [seedInput, setSeedInput] = useState<string>("");
   const toggleVisibility = (index: number): void => {
     setVisibleKeys((prev) => {
       const newVisibleKeys = [...prev];
@@ -37,46 +42,78 @@ const Solana: React.FC = () => {
     });
   };
 
-  // Generate a wallet
-  const GenerateWallet = (): void => {
-    const seedPhrase =
-      "apple banana cherry date elderberry fig grape honeydew kiwi lemon mango nectarine";
-    setSeed(seedPhrase);
-
-    const newPublicKey = "HYEQvgVdVPYZgHE2ipuxkBnLgQDvPiC9kANs1n72WMZp";
-    const newPrivateKey =
-      "4VXyNPWwpw7VacpkkPCRZK2r9x1Dc4NdpW4HWgEGKQ7EmVMFBmw4zJ77ZhdRjiiQH68DGP5wJgFscjQHCT6xeW7G";
-
-    setPublicKey(newPublicKey);
-    setPrivateKey(newPrivateKey);
-    setWallets([
-      ...wallets,
-      { publicKey: newPublicKey, privateKey: newPrivateKey },
-    ]);
+  const handleDeleteClick = (index: number): void => {
+    setWalletToDelete(index);
+    setOpenDeleteModal(true);
   };
 
-  // Add a new wallet
-  const AddWallet = (): void => {
-    if (publicKey && privateKey) {
-      setWallets([...wallets, { publicKey, privateKey }]);
+  const handleCancelDelete = (): void => {
+    setOpenDeleteModal(false);
+    setWalletToDelete(null);
+  };
+
+  const handleConfirmDelete = (): void => {
+    if (walletToDelete !== null) {
+      setWallets((prev) => prev.filter((_, i) => i !== walletToDelete));
+      setVisibleKeys((prev) => prev.filter((_, i) => i !== walletToDelete));
     }
+    setOpenDeleteModal(false);
+    setWalletToDelete(null);   
+  };
+  const [openModal, setOpenModal] = useState<boolean>(false);
+  const openConfirmModal = (): void => {
+    setOpenModal(true);
   };
 
-  // Handle deletion of a wallet
-  const handleDelete = (index: number): void => {
-    setWallets((prev) => prev.filter((_, i) => i !== index));
-    setVisibleKeys((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // Clear all wallets
-  const ClearWallet = (): void => {
+  const handleConfirmClear = (): void => {
     setSeed("");
-    setPublicKey("");
-    setPrivateKey("");
     setWallets([]);
+    setOpenModal(false);
+    navigate("/");
   };
 
-  // Toggle between grid and card view
+  const handleCancelClear = (): void => {
+    setOpenModal(false);
+  };
+
+  const GenerateWallet = (): void => {    
+    if(seedInput){
+      if (!validateMnemonic(seedInput)) {
+        alert("Invalid seed phrase. Please try again.");
+        return;
+      } else{
+        setSeed(seedInput);
+        const walletNo = 0
+        const { publicKey, privateKey } = deriveKeyPair({ mnemonic:seedInput, walletNo });
+    
+         setWallets([
+          ...wallets,
+          { publicKey: publicKey, privateKey: privateKey },
+        ]);
+        setWalletNo(walletNo + 1);
+        return
+      }
+    }
+    const mnemonic = generateMnemonic();
+    setSeed(mnemonic);
+    const walletNo = 0
+    const { publicKey, privateKey } = deriveKeyPair({ mnemonic, walletNo });
+
+     setWallets([
+      ...wallets,
+      { publicKey: publicKey, privateKey: privateKey },
+    ]);
+    setWalletNo(walletNo + 1);
+  };
+
+
+  const AddWallet = (mnemonic: string, walletNo: number): void => {
+    const { publicKey, privateKey } = deriveKeyPair({ mnemonic, walletNo });
+    setWallets([...wallets, { publicKey, privateKey }]);
+    setWalletNo(walletNo + 1);
+  };
+  
+
   const toggleLayout = (): void => {
     setGridView((prev) => !prev);
   };
@@ -113,7 +150,9 @@ const Solana: React.FC = () => {
                   variant="outlined"
                   placeholder="enter your seed phrase (or leave blank to generate)"
                   fullWidth
-                  color="success"
+                  color="primary"
+                  value={seedInput}
+                  onChange={(e) => setSeedInput(e.target.value)}
                   sx={{
                     flexGrow: 1,
                     input: { color: "white" },
@@ -134,7 +173,7 @@ const Solana: React.FC = () => {
                   }}
                 />
                 <Button onClick={GenerateWallet} color="error">
-                  Generate Wallet
+                {seedInput ? "Add Wallet" : "Generate Wallet"}
                 </Button>
               </Stack>
             </>
@@ -168,7 +207,7 @@ const Solana: React.FC = () => {
                 <Button
                   variant="outlined"
                   size="small"
-                  onClick={AddWallet}
+                  onClick={() => AddWallet(seed, walletNo)}
                   color="primary"
                 >
                   Add Wallet
@@ -177,7 +216,7 @@ const Solana: React.FC = () => {
                 <Button
                   variant="outlined"
                   size="small"
-                  onClick={ClearWallet}
+                  onClick={openConfirmModal}
                   color="error"
                 >
                   Clear Wallets
@@ -216,7 +255,7 @@ const Solana: React.FC = () => {
                         >
                           Wallet {index + 1}
                           <IconButton
-                            onClick={() => handleDelete(index)}
+                            onClick={() => handleDeleteClick(index)}
                             sx={{
                               "&:hover": {
                                 backgroundColor: "rgba(255, 0, 0, 0.1)",
@@ -313,7 +352,7 @@ const Solana: React.FC = () => {
                     >
                       Wallet {index + 1}
                       <IconButton
-                        onClick={() => handleDelete(index)}
+                        onClick={() => handleDeleteClick(index)}
                         sx={{
                           "&:hover": {
                             backgroundColor: "rgba(255, 0, 0, 0.1)",
@@ -372,6 +411,26 @@ const Solana: React.FC = () => {
           </Box>
         )}
       </Box>
+
+      <DeleteModal
+        open={openModal}
+        onClose={handleCancelClear}
+        onConfirm={handleConfirmClear}
+        title="Are you sure you want to clear all wallets?"
+        confirmButtonText="Confirm"
+        cancelButtonText="Cancel"
+      />
+
+      <DeleteModal
+        open={openDeleteModal}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title={`Are you sure you want to delete Wallet ${
+          walletToDelete !== null ? walletToDelete + 1 : ""
+        }?`}
+        confirmButtonText="Delete"
+        cancelButtonText="Cancel"
+      />
     </>
   );
 };
