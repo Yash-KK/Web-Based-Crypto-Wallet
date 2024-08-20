@@ -146,6 +146,7 @@ const Solana: React.FC = () => {
                 openConfirmModal={openConfirmModal}
                 seed={seed}
                 walletNo={walletNo}
+                coinType="Solana"
               />
             </>
           )}

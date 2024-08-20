@@ -146,6 +146,7 @@ const Ethereum: React.FC = () => {
                 openConfirmModal={openConfirmModal}
                 seed={seed}
                 walletNo={walletNo}
+                coinType="Ethereum"
               />
             </>
           )}

@@ -8,6 +8,7 @@ interface WalletActionsProps {
   openConfirmModal: () => void;
   seed: string;
   walletNo: number;
+  coinType: string
 }
 
 const WalletActions: React.FC<WalletActionsProps> = ({
@@ -16,6 +17,7 @@ const WalletActions: React.FC<WalletActionsProps> = ({
   openConfirmModal,
   seed,
   walletNo,
+  coinType,
 }) => {
   return (
     <Stack direction="row" spacing={2} mt={2}>
@@ -24,7 +26,7 @@ const WalletActions: React.FC<WalletActionsProps> = ({
         component="div"
         sx={{ flexGrow: 1, fontSize: "1.5rem" }}
       >
-        Solana Wallet
+        {coinType} Wallet
       </Typography>
       <IconButton
         onClick={toggleLayout}
