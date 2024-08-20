@@ -1,5 +1,12 @@
 import React from "react";
-import { Card, CardContent, Typography, IconButton, Box } from "@mui/material";
+import {
+  Card,
+  CardContent,
+  Typography,
+  IconButton,
+  Box,
+  Tooltip,
+} from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
@@ -14,6 +21,8 @@ interface WalletCardViewListProps {
   visibleKeys: boolean[];
   handleDeleteClick: (index: number) => void;
   toggleVisibility: (index: number) => void;
+  balances: { sol?: number; eth?: number; lamports?: number, wei?:number }[];
+  coinType: 'Solana' | 'Ethereum';
 }
 
 const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
@@ -21,90 +30,114 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
   visibleKeys,
   handleDeleteClick,
   toggleVisibility,
+  balances,
+  coinType
 }) => {
   return (
     <Box my={4} alignItems="center" gap={4}>
-      {wallets.map((wallet, index) => (
-        <Card
-          key={index}
-          sx={{
-            margin: "16px 0",
-            padding: "16px",
-            backgroundColor: "#242424",
-            border: "2px solid grey",
-            boxShadow: "0px 4px 12px rgba(255, 255, 255, 0.4)",
-            position: "relative",
-          }}
-        >
-          <CardContent>
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: "bold",
-                fontSize: "2.25rem",
-                color: "white",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              Wallet {index + 1}
-              <IconButton
-                onClick={() => handleDeleteClick(index)}
+      {wallets.map((wallet, index) => {
+        const balance = balances[index] || {};
+
+        let balanceDisplay = '';
+        let tooltipTitle = '';
+
+        if (coinType === 'Solana') {
+          balanceDisplay = `${(balance.sol || 0).toFixed(4)} SOL`;
+          tooltipTitle = `Total Lamports: ${balance.lamports || 0}`;
+        } else if (coinType === 'Ethereum') {
+          balanceDisplay = `${(balance.eth || 0).toFixed(4)} ETH`;
+          tooltipTitle = `Total Wei: ${balance.wei || 0}`;
+        }
+
+        return (
+          <Card
+            key={index}
+            sx={{
+              margin: "16px 0",
+              padding: "16px",
+              backgroundColor: "#242424",
+              border: "2px solid grey",
+              boxShadow: "0px 4px 12px rgba(255, 255, 255, 0.4)",
+              position: "relative",
+            }}
+          >
+            <CardContent>
+              <Typography
+                variant="h6"
                 sx={{
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 0, 0, 0.1)",
-                  },
+                  fontWeight: "bold",
+                  fontSize: "2.25rem",
+                  color: "white",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                <DeleteIcon color="error" />
-              </IconButton>
-            </Typography>
-            <Box>
-              <Typography
-                variant="body1"
-                sx={{ marginTop: "8px", color: "white" }}
-              >
-                <div>
-                  <strong>Public Key:</strong>{" "}
-                </div>
-                {wallet.publicKey}
+                Wallet {index + 1}
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Tooltip title={tooltipTitle} arrow>
+                    <Typography variant="body1" sx={{ color: "white", marginRight: "8px" }}>
+                      {balanceDisplay}
+                    </Typography>
+                  </Tooltip>
+                  <IconButton
+                    onClick={() => handleDeleteClick(index)}
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: "rgba(255, 0, 0, 0.1)",
+                      },
+                    }}
+                  >
+                    <DeleteIcon color="error" />
+                  </IconButton>
+                </Box>
               </Typography>
-              <br />
-              <Box sx={{ position: "relative" }}>
+              <Box>
                 <Typography
                   variant="body1"
-                  sx={{ marginTop: "4px", color: "white" }}
+                  sx={{ marginTop: "8px", color: "white" }}
                 >
                   <div>
-                    {" "}
-                    <strong>Private Key:</strong>
-                  </div>{" "}
-                  {visibleKeys[index]
-                    ? wallet.privateKey
-                    : "****************************************************************************************"}
+                    <strong>Public Key:</strong>{" "}
+                  </div>
+                  {wallet.publicKey}
                 </Typography>
-                <IconButton
-                  onClick={() => toggleVisibility(index)}
-                  sx={{
-                    color: "white",
-                    position: "absolute",
-                    right: 0,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                >
-                  {visibleKeys[index] ? (
-                    <VisibilityOff />
-                  ) : (
-                    <Visibility />
-                  )}
-                </IconButton>
+                <br />
+                <Box sx={{ position: "relative" }}>
+                  <Typography
+                    variant="body1"
+                    sx={{ marginTop: "4px", color: "white" }}
+                  >
+                    <div>
+                      {" "}
+                      <strong>Private Key:</strong>
+                    </div>{" "}
+                    {visibleKeys[index]
+                      ? wallet.privateKey
+                      : "****************************************************************************************"}
+                  </Typography>
+                  <IconButton
+                    onClick={() => toggleVisibility(index)}
+                    sx={{
+                      color: "white",
+                      position: "absolute",
+                      right: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
+                  >
+                    {visibleKeys[index] ? (
+                      <VisibilityOff />
+                    ) : (
+                      <Visibility />
+                    )}
+                  </IconButton>
+                </Box>
               </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </Box>
   );
 };
