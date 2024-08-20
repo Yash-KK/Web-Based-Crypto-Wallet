@@ -1,15 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Navbar from "../NavBar";
 import SeedPhraseAccordion from "../common/SeedPhraseAccordion";
 import { generateMnemonic, validateMnemonic } from "bip39";
 import DeleteModal from "../common/DeleteAllModal";
 import { useNavigate } from "react-router-dom";
-import { deriveKeyPairSolana } from "../common/utils";
+import { deriveKeyPairSolana, getBalance } from "../common/utils";
 import WalletGridViewList from "../common/WalletGridView";
 import WalletCardViewList from "../common/WalletCardView";
 import WalletActions from "../common/WalletActions";
 import SeedPhraseGenerator from "../common/SeedPhraseGenerator";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 interface Wallet {
   publicKey: string;
@@ -21,6 +22,9 @@ const Solana: React.FC = () => {
 
   const [seed, setSeed] = useState<string>("");
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [balances, setBalances] = useState<
+    Map<string, { sol: number; lamports: number }>
+  >(new Map());
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
   const [walletToDelete, setWalletToDelete] = useState<number | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<boolean[]>(
@@ -29,6 +33,8 @@ const Solana: React.FC = () => {
   const [walletNo, setWalletNo] = useState<number>(-1);
   const [gridView, setGridView] = useState<boolean>(false);
   const [seedInput, setSeedInput] = useState<string>("");
+  const [openModal, setOpenModal] = useState<boolean>(false);
+
   const toggleVisibility = (index: number): void => {
     setVisibleKeys((prev) => {
       const newVisibleKeys = [...prev];
@@ -36,6 +42,7 @@ const Solana: React.FC = () => {
       return newVisibleKeys;
     });
   };
+
   const handleDeleteClick = (index: number): void => {
     setWalletToDelete(index);
     setOpenDeleteModal(true);
@@ -55,7 +62,6 @@ const Solana: React.FC = () => {
     setWalletToDelete(null);
     setWalletNo(walletNo - 1);
   };
-  const [openModal, setOpenModal] = useState<boolean>(false);
   const openConfirmModal = (): void => {
     setOpenModal(true);
   };
@@ -71,6 +77,38 @@ const Solana: React.FC = () => {
   const handleCancelClear = (): void => {
     setOpenModal(false);
   };
+
+  const fetchBalances = async () => {
+    const updatedBalances = new Map(balances);
+    await Promise.all(
+      wallets.map(async (wallet) => {
+        if (updatedBalances.has(wallet.publicKey)) return;
+
+        try {
+          const balance = await getBalance({
+            publicKey: wallet.publicKey,
+            method: "getBalance",
+            url: import.meta.env.VITE_APP_SOLANA_API_URL,
+            coinType: "Solana",
+          });
+          const solBalance = balance / LAMPORTS_PER_SOL;
+          updatedBalances.set(wallet.publicKey, {
+            sol: solBalance,
+            lamports: balance,
+          });
+          setBalances(new Map(updatedBalances));
+        } catch (error) {
+          console.error("Error fetching balance:", error);
+          updatedBalances.set(wallet.publicKey, { sol: 0, lamports: 0 });
+          setBalances(new Map(updatedBalances));
+        }
+      })
+    );
+  };
+
+  useEffect(() => {
+    fetchBalances();
+  }, [wallets]);
 
   const GenerateWallet = (): void => {
     if (seedInput) {
@@ -96,14 +134,20 @@ const Solana: React.FC = () => {
     const mnemonic = generateMnemonic();
     setSeed(mnemonic);
     const walletNo = 0;
-    const { publicKey, privateKey } = deriveKeyPairSolana({ mnemonic, walletNo });
+    const { publicKey, privateKey } = deriveKeyPairSolana({
+      mnemonic,
+      walletNo,
+    });
 
     setWallets([...wallets, { publicKey: publicKey, privateKey: privateKey }]);
     setWalletNo(walletNo + 1);
   };
 
   const AddWallet = (mnemonic: string, walletNo: number): void => {
-    const { publicKey, privateKey } = deriveKeyPairSolana({ mnemonic, walletNo });
+    const { publicKey, privateKey } = deriveKeyPairSolana({
+      mnemonic,
+      walletNo,
+    });
     setWallets([...wallets, { publicKey, privateKey }]);
     setWalletNo(walletNo + 1);
   };
@@ -160,6 +204,8 @@ const Solana: React.FC = () => {
                 visibleKeys={visibleKeys}
                 handleDeleteClick={handleDeleteClick}
                 toggleVisibility={toggleVisibility}
+                balances={Array.from(balances.values())}
+                coinType="Solana"
               />
             ) : (
               <WalletCardViewList
@@ -167,6 +213,8 @@ const Solana: React.FC = () => {
                 visibleKeys={visibleKeys}
                 handleDeleteClick={handleDeleteClick}
                 toggleVisibility={toggleVisibility}
+                balances={Array.from(balances.values())}
+                coinType="Solana"
               />
             )}
           </Box>

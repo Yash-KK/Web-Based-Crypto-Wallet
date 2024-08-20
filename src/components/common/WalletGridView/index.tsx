@@ -22,6 +22,8 @@ interface WalletGridViewListProps {
   visibleKeys: boolean[];
   handleDeleteClick: (index: number) => void;
   toggleVisibility: (index: number) => void;
+  balances: { sol?: number; eth?: number; lamports?: number; wei?: number }[];
+  coinType: "Solana" | "Ethereum";
 }
 
 const WalletGridViewList: React.FC<WalletGridViewListProps> = ({
@@ -29,107 +31,143 @@ const WalletGridViewList: React.FC<WalletGridViewListProps> = ({
   visibleKeys,
   handleDeleteClick,
   toggleVisibility,
+  balances,
+  coinType,
 }) => {
   return (
     <Grid container spacing={2}>
-      {wallets.map((wallet, index) => (
-        <Grid item xs={12} sm={6} md={4} key={index}>
-          <Card
-            sx={{
-              padding: "16px",
-              backgroundColor: "#242424",
-              border: "2px solid grey",
-              boxShadow: "0px 4px 12px rgba(255, 255, 255, 0.4)",
-              position: "relative",
-            }}
-          >
-            <CardContent>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: "bold",
-                  fontSize: "1.5rem",
-                  color: "white",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                Wallet {index + 1}
-                <IconButton
-                  onClick={() => handleDeleteClick(index)}
+      {wallets.map((wallet, index) => {
+        const balance = balances[index] || {};
+
+        let balanceDisplay = "";
+        let tooltipTitle = "";
+
+        if (coinType === "Solana") {
+          balanceDisplay = `${(balance.sol || 0).toFixed(4)} SOL`;
+          tooltipTitle = `Total Lamports: ${balance.lamports || 0}`;
+        } else if (coinType === "Ethereum") {
+          balanceDisplay = `${(balance.eth || 0).toFixed(4)} ETH`;
+          tooltipTitle = `Total Wei: ${balance.wei || 0}`;
+        }
+
+        return (
+          <Grid item xs={12} sm={6} md={4} key={index}>
+            <Card
+              sx={{
+                padding: "16px",
+                backgroundColor: "#242424",
+                border: "2px solid grey",
+                boxShadow: "0px 4px 12px rgba(255, 255, 255, 0.4)",
+                position: "relative",
+              }}
+            >
+              <CardContent>
+                <Typography
+                  variant="h6"
                   sx={{
-                    "&:hover": {
-                      backgroundColor: "rgba(255, 0, 0, 0.1)",
-                    },
+                    fontWeight: "bold",
+                    fontSize: "1.5rem",
+                    color: "white",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
-                  <DeleteIcon color="error" />
-                </IconButton>
-              </Typography>
-              <Box>
-                <Tooltip title={wallet.publicKey} placement="top">
-                  <Typography
-                    variant="body1"
+                  Wallet {index + 1}
+                  <IconButton
+                    onClick={() => handleDeleteClick(index)}
                     sx={{
-                      marginTop: "8px",
-                      color: "white",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      "&:hover": {
+                        backgroundColor: "rgba(255, 0, 0, 0.1)",
+                      },
                     }}
                   >
-                    <div>
-                      <strong>Public Key:</strong>{" "}
-                    </div>
-                    {wallet.publicKey}
-                  </Typography>
-                </Tooltip>
-                <br />
-                <Box sx={{ position: "relative" }}>
-                  <Tooltip
-                    title={
-                      visibleKeys[index] ? wallet.privateKey : "Click to reveal"
-                    }
-                    placement="top"
-                  >
+                    <DeleteIcon color="error" />
+                  </IconButton>
+                </Typography>
+                <Box>
+                  <Tooltip title={wallet.publicKey} placement="top">
                     <Typography
                       variant="body1"
                       sx={{
-                        marginTop: "4px",
+                        marginTop: "8px",
                         color: "white",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        paddingRight: "35px",
                       }}
                     >
                       <div>
-                        <strong>Private Key:</strong>
-                      </div>{" "}
-                      {visibleKeys[index]
-                        ? wallet.privateKey
-                        : "****************************************************************************************"}
+                        <strong>Public Key:</strong>{" "}
+                      </div>
+                      {wallet.publicKey}
                     </Typography>
                   </Tooltip>
-                  <IconButton
-                    onClick={() => toggleVisibility(index)}
-                    sx={{
-                      color: "white",
-                      position: "absolute",
-                      right: 0,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                    }}
-                  >
-                    {visibleKeys[index] ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
+                  <br />
+                  <Box sx={{ position: "relative" }}>
+                    <Tooltip
+                      title={
+                        visibleKeys[index]
+                          ? wallet.privateKey
+                          : "Click to reveal"
+                      }
+                      placement="top"
+                    >
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          marginTop: "4px",
+                          color: "white",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          paddingRight: "35px",
+                        }}
+                      >
+                        <div>
+                          <strong>Private Key:</strong>
+                        </div>{" "}
+                        {visibleKeys[index]
+                          ? wallet.privateKey
+                          : "****************************************************************************************"}
+                      </Typography>
+                    </Tooltip>
+                    <IconButton
+                      onClick={() => toggleVisibility(index)}
+                      sx={{
+                        color: "white",
+                        position: "absolute",
+                        right: 0,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      }}
+                    >
+                      {visibleKeys[index] ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </Box>
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
+                <Typography
+                  variant="body1"
+                  sx={{
+                    marginTop: "16px",
+                    color: "white",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <div>
+                    <strong>Balance:</strong>
+                  </div>
+                  <Tooltip title={tooltipTitle} placement="top">
+                    <Typography variant="body1" sx={{ color: "white" }}>
+                      {balanceDisplay}
+                    </Typography>
+                  </Tooltip>
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        );
+      })}
     </Grid>
   );
 };

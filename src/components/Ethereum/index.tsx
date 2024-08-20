@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Navbar from "../NavBar";
 import SeedPhraseAccordion from "../common/SeedPhraseAccordion";
 import { generateMnemonic, validateMnemonic } from "bip39";
 import DeleteModal from "../common/DeleteAllModal";
 import { useNavigate } from "react-router-dom";
-import { deriveKeyPairEthereum } from "../common/utils";
+import { deriveKeyPairEthereum, getBalance } from "../common/utils";
 import WalletGridViewList from "../common/WalletGridView";
 import WalletCardViewList from "../common/WalletCardView";
 import WalletActions from "../common/WalletActions";
@@ -29,6 +29,9 @@ const Ethereum: React.FC = () => {
   const [walletNo, setWalletNo] = useState<number>(-1);
   const [gridView, setGridView] = useState<boolean>(false);
   const [seedInput, setSeedInput] = useState<string>("");
+  const [balances, setBalances] = useState<
+    Map<string, { eth: number; wei: number }>
+  >(new Map());
   const toggleVisibility = (index: number): void => {
     setVisibleKeys((prev) => {
       const newVisibleKeys = [...prev];
@@ -96,14 +99,20 @@ const Ethereum: React.FC = () => {
     const mnemonic = generateMnemonic();
     setSeed(mnemonic);
     const walletNo = 0;
-    const { publicKey, privateKey } = deriveKeyPairEthereum({ mnemonic, walletNo });
+    const { publicKey, privateKey } = deriveKeyPairEthereum({
+      mnemonic,
+      walletNo,
+    });
 
     setWallets([...wallets, { publicKey: publicKey, privateKey: privateKey }]);
     setWalletNo(walletNo + 1);
   };
 
   const AddWallet = (mnemonic: string, walletNo: number): void => {
-    const { publicKey, privateKey } = deriveKeyPairEthereum({ mnemonic, walletNo });
+    const { publicKey, privateKey } = deriveKeyPairEthereum({
+      mnemonic,
+      walletNo,
+    });
     setWallets([...wallets, { publicKey, privateKey }]);
     setWalletNo(walletNo + 1);
   };
@@ -111,6 +120,36 @@ const Ethereum: React.FC = () => {
   const toggleLayout = (): void => {
     setGridView((prev) => !prev);
   };
+
+  const fetchBalances = async () => {
+    const updatedBalances = new Map(balances);
+    await Promise.all(
+      wallets.map(async (wallet) => {
+        if (updatedBalances.has(wallet.publicKey)) return;
+
+        try {
+          const balance = await getBalance({
+            publicKey: wallet.publicKey,
+            method: "eth_getBalance",
+            url: import.meta.env.VITE_APP_ETHEREUM_API_URL,
+            coinType: "Ethereum",
+          });
+          const wei = parseInt(balance, 16);
+          const eth = wei / 10 ** 18;
+          updatedBalances.set(wallet.publicKey, { eth: eth, wei: wei });
+          setBalances(new Map(updatedBalances));
+        } catch (error) {
+          console.error("Error fetching balance:", error);
+          updatedBalances.set(wallet.publicKey, { eth: 0, wei: 0 });
+          setBalances(new Map(updatedBalances));
+        }
+      })
+    );
+  };
+
+  useEffect(() => {
+    fetchBalances();
+  }, [wallets]);
 
   return (
     <>
@@ -160,6 +199,8 @@ const Ethereum: React.FC = () => {
                 visibleKeys={visibleKeys}
                 handleDeleteClick={handleDeleteClick}
                 toggleVisibility={toggleVisibility}
+                balances={Array.from(balances.values())}
+                coinType="Ethereum"
               />
             ) : (
               <WalletCardViewList
@@ -167,6 +208,8 @@ const Ethereum: React.FC = () => {
                 visibleKeys={visibleKeys}
                 handleDeleteClick={handleDeleteClick}
                 toggleVisibility={toggleVisibility}
+                balances={Array.from(balances.values())}
+                coinType="Ethereum"
               />
             )}
           </Box>

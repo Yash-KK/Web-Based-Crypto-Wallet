@@ -5,6 +5,7 @@ import nacl from "tweetnacl";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
+import axios from "axios";
 
 type DeriveKeyPairSolanaProps = {
   mnemonic: string,
@@ -43,7 +44,6 @@ type DeriveKeyPairEthereumProps = {
   walletNo: number
 }
 export const deriveKeyPairEthereum = ({ mnemonic, walletNo }: DeriveKeyPairEthereumProps) => {
-  console.log(mnemonic)
   const seed = mnemonicToSeedSync(mnemonic);
   const derivationPath = `m/44'/60'/${walletNo}'/0'`;
   const hdNode = HDNodeWallet.fromSeed(seed);
@@ -51,10 +51,30 @@ export const deriveKeyPairEthereum = ({ mnemonic, walletNo }: DeriveKeyPairEther
   const privateKey = child.privateKey;
   const publicKey = new Wallet(privateKey).address;
 
-
-  console.log("private Key: ", privateKey);
-  console.log("Public Key: ", publicKey);
-
   return { publicKey, privateKey };
+
+}
+
+type GetBalance = {
+  publicKey: string,
+  method: any,
+  url: any,
+  coinType: string
+}
+
+export const getBalance = async ({ publicKey, method, url, coinType }: GetBalance) => {
+
+  const { data } = await axios.post(
+    url,
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: method,
+      params: [publicKey],
+    }
+  );
+
+  if (coinType === "Solana") return data.result.value;
+  if (coinType === "Ethereum") return data.result;  
 
 }
