@@ -32,6 +32,7 @@ const SeedPhraseAccordion: React.FC<SeedPhraseAccordionProps> = ({
     if (reason === "clickaway") {
       return;
     }
+    console.log(event)
     setOpen(false);
   };
   return (
