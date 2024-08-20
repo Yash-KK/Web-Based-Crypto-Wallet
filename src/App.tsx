@@ -11,7 +11,10 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   function handleClickForSolana() {
-    navigate("/solana");
+    navigate("/sol");
+  }
+  function handleClickForEthereum(){
+    navigate("/eth");
   }
   return (
     <Box my={4} alignItems="center" gap={4} p={2}>
@@ -28,7 +31,7 @@ const App: React.FC = () => {
 
       <Stack spacing={2} direction="row">
         <Button onClick={handleClickForSolana} variant="outlined">Solana</Button>
-        <Button variant="outlined">Ethereum</Button>
+        <Button onClick={handleClickForEthereum} variant="outlined">Ethereum</Button>
       </Stack>
     </Box>
   );
