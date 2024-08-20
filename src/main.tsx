@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App.tsx";
 import "./index.css";
 import Solana from "./components/Solana/index.tsx";
+import Ethereum from "./components/Ethereum/index.tsx";
 
 const router = createBrowserRouter([
   {
@@ -12,8 +13,12 @@ const router = createBrowserRouter([
     element: <App />,
   },
   {
-    path: "/solana",
+    path: "/sol",
     element: <Solana />,
+  },
+  {
+    path: "/eth",
+    element: <Ethereum />,
   },
 ]);
 

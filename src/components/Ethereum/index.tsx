@@ -5,7 +5,7 @@ import SeedPhraseAccordion from "../common/SeedPhraseAccordion";
 import { generateMnemonic, validateMnemonic } from "bip39";
 import DeleteModal from "../common/DeleteAllModal";
 import { useNavigate } from "react-router-dom";
-import { deriveKeyPairSolana } from "../common/utils";
+import { deriveKeyPairEthereum } from "../common/utils";
 import WalletGridViewList from "../common/WalletGridView";
 import WalletCardViewList from "../common/WalletCardView";
 import WalletActions from "../common/WalletActions";
@@ -16,7 +16,7 @@ interface Wallet {
   privateKey: string;
 }
 
-const Solana: React.FC = () => {
+const Ethereum: React.FC = () => {
   const navigate = useNavigate();
 
   const [seed, setSeed] = useState<string>("");
@@ -80,7 +80,7 @@ const Solana: React.FC = () => {
       } else {
         setSeed(seedInput);
         const walletNo = 0;
-        const { publicKey, privateKey } = deriveKeyPairSolana({
+        const { publicKey, privateKey } = deriveKeyPairEthereum({
           mnemonic: seedInput,
           walletNo,
         });
@@ -96,14 +96,14 @@ const Solana: React.FC = () => {
     const mnemonic = generateMnemonic();
     setSeed(mnemonic);
     const walletNo = 0;
-    const { publicKey, privateKey } = deriveKeyPairSolana({ mnemonic, walletNo });
+    const { publicKey, privateKey } = deriveKeyPairEthereum({ mnemonic, walletNo });
 
     setWallets([...wallets, { publicKey: publicKey, privateKey: privateKey }]);
     setWalletNo(walletNo + 1);
   };
 
   const AddWallet = (mnemonic: string, walletNo: number): void => {
-    const { publicKey, privateKey } = deriveKeyPairSolana({ mnemonic, walletNo });
+    const { publicKey, privateKey } = deriveKeyPairEthereum({ mnemonic, walletNo });
     setWallets([...wallets, { publicKey, privateKey }]);
     setWalletNo(walletNo + 1);
   };
@@ -195,4 +195,4 @@ const Solana: React.FC = () => {
   );
 };
 
-export default Solana;
+export default Ethereum;
