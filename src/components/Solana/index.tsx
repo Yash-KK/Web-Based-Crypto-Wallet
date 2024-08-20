@@ -11,6 +11,7 @@ import WalletCardViewList from "../common/WalletCardView";
 import WalletActions from "../common/WalletActions";
 import SeedPhraseGenerator from "../common/SeedPhraseGenerator";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Snackbar, Alert, Button } from "@mui/material";
 
 interface Wallet {
   publicKey: string;
@@ -19,7 +20,7 @@ interface Wallet {
 
 const Solana: React.FC = () => {
   const navigate = useNavigate();
-
+  
   const [seed, setSeed] = useState<string>("");
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [balances, setBalances] = useState<
@@ -35,6 +36,11 @@ const Solana: React.FC = () => {
   const [seedInput, setSeedInput] = useState<string>("");
   const [openModal, setOpenModal] = useState<boolean>(false);
 
+
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('error');
+  
   const toggleVisibility = (index: number): void => {
     setVisibleKeys((prev) => {
       const newVisibleKeys = [...prev];
@@ -62,6 +68,7 @@ const Solana: React.FC = () => {
     setWalletToDelete(null);
     setWalletNo(walletNo - 1);
   };
+
   const openConfirmModal = (): void => {
     setOpenModal(true);
   };
@@ -76,6 +83,64 @@ const Solana: React.FC = () => {
 
   const handleCancelClear = (): void => {
     setOpenModal(false);
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+
+  const GenerateWallet = (): void => {
+    if (seedInput) {
+      if (!validateMnemonic(seedInput)) {
+        setSnackbarMessage('Invalid seed phrase. Please try again.');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      } else {
+        setSeed(seedInput);
+        const walletNo = 0;
+        const { publicKey, privateKey } = deriveKeyPairSolana({
+          mnemonic: seedInput,
+          walletNo,
+        });
+
+        setWallets([
+          ...wallets,
+          { publicKey: publicKey, privateKey: privateKey },
+        ]);
+        setWalletNo(walletNo + 1);
+        setSnackbarMessage('Wallet generated successfully.');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+        return;
+      }
+    }
+    const mnemonic = generateMnemonic();
+    setSeed(mnemonic);
+    const walletNo = 0;
+    const { publicKey, privateKey } = deriveKeyPairSolana({
+      mnemonic,
+      walletNo,
+    });
+
+    setWallets([...wallets, { publicKey: publicKey, privateKey: privateKey }]);
+    setWalletNo(walletNo + 1);
+    setSnackbarMessage('Wallet generated successfully.');
+    setSnackbarSeverity('success');
+    setSnackbarOpen(true);
+  };
+
+  const AddWallet = (mnemonic: string, walletNo: number): void => {
+    const { publicKey, privateKey } = deriveKeyPairSolana({
+      mnemonic,
+      walletNo,
+    });
+    setWallets([...wallets, { publicKey, privateKey }]);
+    setWalletNo(walletNo + 1);
+  };
+
+  const toggleLayout = (): void => {
+    setGridView((prev) => !prev);
   };
 
   const fetchBalances = async () => {
@@ -109,52 +174,6 @@ const Solana: React.FC = () => {
   useEffect(() => {
     fetchBalances();
   }, [wallets]);
-
-  const GenerateWallet = (): void => {
-    if (seedInput) {
-      if (!validateMnemonic(seedInput)) {
-        alert("Invalid seed phrase. Please try again.");
-        return;
-      } else {
-        setSeed(seedInput);
-        const walletNo = 0;
-        const { publicKey, privateKey } = deriveKeyPairSolana({
-          mnemonic: seedInput,
-          walletNo,
-        });
-
-        setWallets([
-          ...wallets,
-          { publicKey: publicKey, privateKey: privateKey },
-        ]);
-        setWalletNo(walletNo + 1);
-        return;
-      }
-    }
-    const mnemonic = generateMnemonic();
-    setSeed(mnemonic);
-    const walletNo = 0;
-    const { publicKey, privateKey } = deriveKeyPairSolana({
-      mnemonic,
-      walletNo,
-    });
-
-    setWallets([...wallets, { publicKey: publicKey, privateKey: privateKey }]);
-    setWalletNo(walletNo + 1);
-  };
-
-  const AddWallet = (mnemonic: string, walletNo: number): void => {
-    const { publicKey, privateKey } = deriveKeyPairSolana({
-      mnemonic,
-      walletNo,
-    });
-    setWallets([...wallets, { publicKey, privateKey }]);
-    setWalletNo(walletNo + 1);
-  };
-
-  const toggleLayout = (): void => {
-    setGridView((prev) => !prev);
-  };
 
   return (
     <>
@@ -240,6 +259,21 @@ const Solana: React.FC = () => {
         confirmButtonText="Delete"
         cancelButtonText="Cancel"
       />
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        action={
+          <Button color="inherit" onClick={handleSnackbarClose}>
+            Close
+          </Button>
+        }
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbarSeverity}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

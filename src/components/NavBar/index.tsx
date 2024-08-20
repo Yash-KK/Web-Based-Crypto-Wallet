@@ -7,7 +7,7 @@ import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet"; // Import the new icon
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import { useNavigate } from "react-router-dom";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import TwitterIcon from "@mui/icons-material/Twitter";

@@ -10,6 +10,7 @@ import WalletGridViewList from "../common/WalletGridView";
 import WalletCardViewList from "../common/WalletCardView";
 import WalletActions from "../common/WalletActions";
 import SeedPhraseGenerator from "../common/SeedPhraseGenerator";
+import { Snackbar, Alert, Button } from "@mui/material";
 
 interface Wallet {
   publicKey: string;
@@ -18,7 +19,7 @@ interface Wallet {
 
 const Ethereum: React.FC = () => {
   const navigate = useNavigate();
-
+  
   const [seed, setSeed] = useState<string>("");
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
@@ -32,6 +33,12 @@ const Ethereum: React.FC = () => {
   const [balances, setBalances] = useState<
     Map<string, { eth: number; wei: number }>
   >(new Map());
+  
+  
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('error');
+  
   const toggleVisibility = (index: number): void => {
     setVisibleKeys((prev) => {
       const newVisibleKeys = [...prev];
@@ -39,6 +46,7 @@ const Ethereum: React.FC = () => {
       return newVisibleKeys;
     });
   };
+
   const handleDeleteClick = (index: number): void => {
     setWalletToDelete(index);
     setOpenDeleteModal(true);
@@ -58,7 +66,9 @@ const Ethereum: React.FC = () => {
     setWalletToDelete(null);
     setWalletNo(walletNo - 1);
   };
+
   const [openModal, setOpenModal] = useState<boolean>(false);
+
   const openConfirmModal = (): void => {
     setOpenModal(true);
   };
@@ -75,10 +85,16 @@ const Ethereum: React.FC = () => {
     setOpenModal(false);
   };
 
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+
   const GenerateWallet = (): void => {
     if (seedInput) {
       if (!validateMnemonic(seedInput)) {
-        alert("Invalid seed phrase. Please try again.");
+        setSnackbarMessage('Invalid seed phrase. Please try again.');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
         return;
       } else {
         setSeed(seedInput);
@@ -93,6 +109,9 @@ const Ethereum: React.FC = () => {
           { publicKey: publicKey, privateKey: privateKey },
         ]);
         setWalletNo(walletNo + 1);
+        setSnackbarMessage('Wallet generated successfully.');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
         return;
       }
     }
@@ -106,6 +125,9 @@ const Ethereum: React.FC = () => {
 
     setWallets([...wallets, { publicKey: publicKey, privateKey: privateKey }]);
     setWalletNo(walletNo + 1);
+    setSnackbarMessage('Wallet generated successfully.');
+    setSnackbarSeverity('success');
+    setSnackbarOpen(true);
   };
 
   const AddWallet = (mnemonic: string, walletNo: number): void => {
@@ -235,6 +257,22 @@ const Ethereum: React.FC = () => {
         confirmButtonText="Delete"
         cancelButtonText="Cancel"
       />
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+        action={
+          <Button color="inherit" onClick={handleSnackbarClose}>
+            Close
+          </Button>
+        }
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbarSeverity}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

@@ -32,7 +32,7 @@ const SeedPhraseAccordion: React.FC<SeedPhraseAccordionProps> = ({
     if (reason === "clickaway") {
       return;
     }
-    setOpen(false); // Close the Snackbar
+    setOpen(false);
   };
   return (
     <>
