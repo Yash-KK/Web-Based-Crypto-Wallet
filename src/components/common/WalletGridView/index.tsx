@@ -22,7 +22,7 @@ interface WalletGridViewListProps {
   visibleKeys: boolean[];
   handleDeleteClick: (index: number) => void;
   toggleVisibility: (index: number) => void;
-  balances: { sol?: number; eth?: number; lamports?: number; wei?: number }[];
+  // balances: { sol?: number; eth?: number; lamports?: number; wei?: number }[];
   coinType: "Solana" | "Ethereum";
 }
 
@@ -31,24 +31,10 @@ const WalletGridViewList: React.FC<WalletGridViewListProps> = ({
   visibleKeys,
   handleDeleteClick,
   toggleVisibility,
-  balances,
-  coinType,
 }) => {
   return (
     <Grid container spacing={2}>
       {wallets.map((wallet, index) => {
-        const balance = balances[index] || {};
-
-        let balanceDisplay = "";
-        let tooltipTitle = "";
-
-        if (coinType === "Solana") {
-          balanceDisplay = `${(balance.sol || 0).toFixed(4)} SOL`;
-          tooltipTitle = `Total Lamports: ${balance.lamports || 0}`;
-        } else if (coinType === "Ethereum") {
-          balanceDisplay = `${(balance.eth || 0).toFixed(4)} ETH`;
-          tooltipTitle = `Total Wei: ${balance.wei || 0}`;
-        }
 
         return (
           <Grid item xs={12} sm={6} md={4} key={index}>
@@ -146,23 +132,6 @@ const WalletGridViewList: React.FC<WalletGridViewListProps> = ({
                     </IconButton>
                   </Box>
                 </Box>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    marginTop: "16px",
-                    color: "white",
-                    fontWeight: "bold",
-                  }}
-                >
-                  <div>
-                    <strong>Balance:</strong>
-                  </div>
-                  <Tooltip title={tooltipTitle} placement="top">
-                    <Typography variant="body1" sx={{ color: "white" }}>
-                      {balanceDisplay}
-                    </Typography>
-                  </Tooltip>
-                </Typography>
               </CardContent>
             </Card>
           </Grid>

@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import Navbar from "../NavBar";
 import SeedPhraseAccordion from "../common/SeedPhraseAccordion";
 import { generateMnemonic, validateMnemonic } from "bip39";
 import DeleteModal from "../common/DeleteAllModal";
 import { useNavigate } from "react-router-dom";
-import { deriveKeyPairEthereum, getBalance } from "../common/utils";
+import { deriveKeyPairEthereum } from "../common/utils";
 import WalletGridViewList from "../common/WalletGridView";
 import WalletCardViewList from "../common/WalletCardView";
 import WalletActions from "../common/WalletActions";
@@ -19,7 +19,7 @@ interface Wallet {
 
 const Ethereum: React.FC = () => {
   const navigate = useNavigate();
-  
+
   const [seed, setSeed] = useState<string>("");
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
@@ -30,15 +30,13 @@ const Ethereum: React.FC = () => {
   const [walletNo, setWalletNo] = useState<number>(-1);
   const [gridView, setGridView] = useState<boolean>(false);
   const [seedInput, setSeedInput] = useState<string>("");
-  const [balances, setBalances] = useState<
-    Map<string, { eth: number; wei: number }>
-  >(new Map());
-  
-  
+
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('error');
-  
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
+    "error"
+  );
+
   const toggleVisibility = (index: number): void => {
     setVisibleKeys((prev) => {
       const newVisibleKeys = [...prev];
@@ -92,8 +90,8 @@ const Ethereum: React.FC = () => {
   const GenerateWallet = (): void => {
     if (seedInput) {
       if (!validateMnemonic(seedInput)) {
-        setSnackbarMessage('Invalid seed phrase. Please try again.');
-        setSnackbarSeverity('error');
+        setSnackbarMessage("Invalid seed phrase. Please try again.");
+        setSnackbarSeverity("error");
         setSnackbarOpen(true);
         return;
       } else {
@@ -109,8 +107,8 @@ const Ethereum: React.FC = () => {
           { publicKey: publicKey, privateKey: privateKey },
         ]);
         setWalletNo(walletNo + 1);
-        setSnackbarMessage('Wallet generated successfully.');
-        setSnackbarSeverity('success');
+        setSnackbarMessage("Wallet generated successfully.");
+        setSnackbarSeverity("success");
         setSnackbarOpen(true);
         return;
       }
@@ -125,8 +123,8 @@ const Ethereum: React.FC = () => {
 
     setWallets([...wallets, { publicKey: publicKey, privateKey: privateKey }]);
     setWalletNo(walletNo + 1);
-    setSnackbarMessage('Wallet generated successfully.');
-    setSnackbarSeverity('success');
+    setSnackbarMessage("Wallet generated successfully.");
+    setSnackbarSeverity("success");
     setSnackbarOpen(true);
   };
 
@@ -142,36 +140,6 @@ const Ethereum: React.FC = () => {
   const toggleLayout = (): void => {
     setGridView((prev) => !prev);
   };
-
-  const fetchBalances = async () => {
-    const updatedBalances = new Map(balances);
-    await Promise.all(
-      wallets.map(async (wallet) => {
-        if (updatedBalances.has(wallet.publicKey)) return;
-
-        try {
-          const balance = await getBalance({
-            publicKey: wallet.publicKey,
-            method: "eth_getBalance",
-            url: import.meta.env.VITE_APP_ETHEREUM_API_URL,
-            coinType: "Ethereum",
-          });
-          const wei = parseInt(balance, 16);
-          const eth = wei / 10 ** 18;
-          updatedBalances.set(wallet.publicKey, { eth: eth, wei: wei });
-          setBalances(new Map(updatedBalances));
-        } catch (error) {
-          console.error("Error fetching balance:", error);
-          updatedBalances.set(wallet.publicKey, { eth: 0, wei: 0 });
-          setBalances(new Map(updatedBalances));
-        }
-      })
-    );
-  };
-
-  useEffect(() => {
-    fetchBalances();
-  }, [wallets]);
 
   return (
     <>
@@ -221,7 +189,7 @@ const Ethereum: React.FC = () => {
                 visibleKeys={visibleKeys}
                 handleDeleteClick={handleDeleteClick}
                 toggleVisibility={toggleVisibility}
-                balances={Array.from(balances.values())}
+                // balances={Array.from(balances.values())}
                 coinType="Ethereum"
               />
             ) : (
@@ -230,7 +198,7 @@ const Ethereum: React.FC = () => {
                 visibleKeys={visibleKeys}
                 handleDeleteClick={handleDeleteClick}
                 toggleVisibility={toggleVisibility}
-                balances={Array.from(balances.values())}
+                // balances={Array.from(balances.values())}
                 coinType="Ethereum"
               />
             )}

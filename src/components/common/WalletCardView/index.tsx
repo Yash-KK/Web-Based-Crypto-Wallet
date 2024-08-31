@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  Card,
-  CardContent,
-  Typography,
-  IconButton,
-  Box,
-  Tooltip,
-} from "@mui/material";
+import { Card, CardContent, Typography, IconButton, Box } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
@@ -21,8 +14,8 @@ interface WalletCardViewListProps {
   visibleKeys: boolean[];
   handleDeleteClick: (index: number) => void;
   toggleVisibility: (index: number) => void;
-  balances: { sol?: number; eth?: number; lamports?: number, wei?:number }[];
-  coinType: 'Solana' | 'Ethereum';
+  // balances: { sol?: number; eth?: number; lamports?: number; wei?: number }[];
+  coinType: "Solana" | "Ethereum";
 }
 
 const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
@@ -30,25 +23,10 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
   visibleKeys,
   handleDeleteClick,
   toggleVisibility,
-  balances,
-  coinType
 }) => {
   return (
     <Box my={4} alignItems="center" gap={4}>
       {wallets.map((wallet, index) => {
-        const balance = balances[index] || {};
-
-        let balanceDisplay = '';
-        let tooltipTitle = '';
-
-        if (coinType === 'Solana') {
-          balanceDisplay = `${(balance.sol || 0).toFixed(4)} SOL`;
-          tooltipTitle = `Total Lamports: ${balance.lamports || 0}`;
-        } else if (coinType === 'Ethereum') {
-          balanceDisplay = `${(balance.eth || 0).toFixed(4)} ETH`;
-          tooltipTitle = `Total Wei: ${balance.wei || 0}`;
-        }
-
         return (
           <Card
             key={index}
@@ -75,11 +53,6 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
               >
                 Wallet {index + 1}
                 <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Tooltip title={tooltipTitle} arrow>
-                    <Typography variant="body1" sx={{ color: "white", marginRight: "8px" }}>
-                      {balanceDisplay}
-                    </Typography>
-                  </Tooltip>
                   <IconButton
                     onClick={() => handleDeleteClick(index)}
                     sx={{
@@ -126,11 +99,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                       transform: "translateY(-50%)",
                     }}
                   >
-                    {visibleKeys[index] ? (
-                      <VisibilityOff />
-                    ) : (
-                      <Visibility />
-                    )}
+                    {visibleKeys[index] ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </Box>
               </Box>

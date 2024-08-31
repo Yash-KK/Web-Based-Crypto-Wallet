@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import Navbar from "../NavBar";
 import SeedPhraseAccordion from "../common/SeedPhraseAccordion";
 import { generateMnemonic, validateMnemonic } from "bip39";
 import DeleteModal from "../common/DeleteAllModal";
 import { useNavigate } from "react-router-dom";
-import { deriveKeyPairSolana, getBalance } from "../common/utils";
+import { deriveKeyPairSolana } from "../common/utils";
 import WalletGridViewList from "../common/WalletGridView";
 import WalletCardViewList from "../common/WalletCardView";
 import WalletActions from "../common/WalletActions";
 import SeedPhraseGenerator from "../common/SeedPhraseGenerator";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+// import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Snackbar, Alert, Button } from "@mui/material";
 
 interface Wallet {
@@ -20,12 +20,10 @@ interface Wallet {
 
 const Solana: React.FC = () => {
   const navigate = useNavigate();
-  
+
   const [seed, setSeed] = useState<string>("");
   const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [balances, setBalances] = useState<
-    Map<string, { sol: number; lamports: number }>
-  >(new Map());
+
   const [openDeleteModal, setOpenDeleteModal] = useState<boolean>(false);
   const [walletToDelete, setWalletToDelete] = useState<number | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<boolean[]>(
@@ -36,11 +34,12 @@ const Solana: React.FC = () => {
   const [seedInput, setSeedInput] = useState<string>("");
   const [openModal, setOpenModal] = useState<boolean>(false);
 
-
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('error');
-  
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
+    "error"
+  );
+
   const toggleVisibility = (index: number): void => {
     setVisibleKeys((prev) => {
       const newVisibleKeys = [...prev];
@@ -92,8 +91,8 @@ const Solana: React.FC = () => {
   const GenerateWallet = (): void => {
     if (seedInput) {
       if (!validateMnemonic(seedInput)) {
-        setSnackbarMessage('Invalid seed phrase. Please try again.');
-        setSnackbarSeverity('error');
+        setSnackbarMessage("Invalid seed phrase. Please try again.");
+        setSnackbarSeverity("error");
         setSnackbarOpen(true);
         return;
       } else {
@@ -109,8 +108,8 @@ const Solana: React.FC = () => {
           { publicKey: publicKey, privateKey: privateKey },
         ]);
         setWalletNo(walletNo + 1);
-        setSnackbarMessage('Wallet generated successfully.');
-        setSnackbarSeverity('success');
+        setSnackbarMessage("Wallet generated successfully.");
+        setSnackbarSeverity("success");
         setSnackbarOpen(true);
         return;
       }
@@ -125,8 +124,8 @@ const Solana: React.FC = () => {
 
     setWallets([...wallets, { publicKey: publicKey, privateKey: privateKey }]);
     setWalletNo(walletNo + 1);
-    setSnackbarMessage('Wallet generated successfully.');
-    setSnackbarSeverity('success');
+    setSnackbarMessage("Wallet generated successfully.");
+    setSnackbarSeverity("success");
     setSnackbarOpen(true);
   };
 
@@ -142,38 +141,6 @@ const Solana: React.FC = () => {
   const toggleLayout = (): void => {
     setGridView((prev) => !prev);
   };
-
-  const fetchBalances = async () => {
-    const updatedBalances = new Map(balances);
-    await Promise.all(
-      wallets.map(async (wallet) => {
-        if (updatedBalances.has(wallet.publicKey)) return;
-
-        try {
-          const balance = await getBalance({
-            publicKey: wallet.publicKey,
-            method: "getBalance",
-            url: import.meta.env.VITE_APP_SOLANA_API_URL,
-            coinType: "Solana",
-          });
-          const solBalance = balance / LAMPORTS_PER_SOL;
-          updatedBalances.set(wallet.publicKey, {
-            sol: solBalance,
-            lamports: balance,
-          });
-          setBalances(new Map(updatedBalances));
-        } catch (error) {
-          console.error("Error fetching balance:", error);
-          updatedBalances.set(wallet.publicKey, { sol: 0, lamports: 0 });
-          setBalances(new Map(updatedBalances));
-        }
-      })
-    );
-  };
-
-  useEffect(() => {
-    fetchBalances();
-  }, [wallets]);
 
   return (
     <>
@@ -223,7 +190,6 @@ const Solana: React.FC = () => {
                 visibleKeys={visibleKeys}
                 handleDeleteClick={handleDeleteClick}
                 toggleVisibility={toggleVisibility}
-                balances={Array.from(balances.values())}
                 coinType="Solana"
               />
             ) : (
@@ -232,7 +198,6 @@ const Solana: React.FC = () => {
                 visibleKeys={visibleKeys}
                 handleDeleteClick={handleDeleteClick}
                 toggleVisibility={toggleVisibility}
-                balances={Array.from(balances.values())}
                 coinType="Solana"
               />
             )}
