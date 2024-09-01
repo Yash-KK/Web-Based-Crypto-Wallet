@@ -11,16 +11,21 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
+  Button,
+  TextField,
+  CircularProgress,
 } from "@mui/material";
+import SendIcon from "@mui/icons-material/Send";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Modal from "@mui/material/Modal";
-import { getBalance } from "../utils";
+import { getBalance, sendTransaction, validateSolanaAddress } from "../utils";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import SolanaLogo from "/src/assets/solana-cdn.svg";
-
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
 interface Wallet {
   publicKey: string;
   privateKey: string;
@@ -51,6 +56,19 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
   const handleNetworkChange = (event: SelectChangeEvent<string>) => {
     setSelectedNetwork(event.target.value as string);
   };
+  const [transactionStep, setTransactionStep] = useState<"send" | "sending">(
+    "send"
+  );
+  const [recipientAddress, setRecipientAddress] = useState<string>("");
+  const [isAddressValid, setIsAddressValid] = useState<boolean>(true);
+
+  const [amount, setAmount] = useState<string>("");
+  const [isAmountValid, setIsAmountValid] = useState<boolean>(true);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState<
+    "success" | "error" | null
+  >(null);
 
   const handleOpen = async (index: number) => {
     try {
@@ -69,7 +87,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
         url: apiUrl,
         coinType: coinType,
       });
-      console.log("lamport Balance: ", lamportBalance);
+
       const solBalance = lamportBalance / LAMPORTS_PER_SOL;
       const newBalances = new Map(balances);
       newBalances.set(
@@ -88,6 +106,19 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
   };
 
   const handleClose = () => {
+    // Reset form fields
+    setRecipientAddress("");
+    setAmount("");
+
+    setIsAddressValid(true);
+    setIsAmountValid(true);
+
+    setTransactionStatus(null);
+    setIsLoading(false);
+
+    setTransactionStep("send");
+    setSelectedNetwork("Mainnet");
+
     setOpenIndex(null);
   };
 
@@ -97,6 +128,13 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
     }
   }, [selectedNetwork]);
 
+  useEffect(() => {
+    // Revalidate amount whenever balance or amount changes
+    const numericValue = parseFloat(amount);
+    const balance = balances.get(wallets[openIndex ?? 0]?.publicKey);
+    const solBalance = balance?.get("sol") || 0;
+    setIsAmountValid(numericValue <= solBalance && !isNaN(numericValue));
+  }, [amount, balances, openIndex, transactionStatus]);
   return (
     <Box my={4} alignItems="center" gap={4}>
       {wallets.map((wallet, index) => {
@@ -199,7 +237,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                   left: "50%",
                   transform: "translate(-50%, -50%)",
                   width: "50%",
-                  height: "60%",
+                  height: "75%",
                   bgcolor: "#242424",
                   color: "white",
                   boxShadow: 24,
@@ -225,9 +263,11 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                 <Box
                   sx={{
                     margin: "25px",
-                    padding: "10px",
-                    border: "2px solid grey",
-                    boxShadow: "0px 4px 12px rgba(255, 255, 255, 0.4)",
+                    padding: "20px",
+                    border: "2px solid rgba(255, 255, 255, 0.6)",
+                    borderRadius: "8px",
+                    backgroundColor: "#1e1e1e",
+                    boxShadow: "0px 8px 20px rgba(0, 255, 255, 0.4)",
                   }}
                 >
                   <Typography
@@ -279,6 +319,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                     </IconButton>
                   </Box>
                 </Box>
+
                 {/* END: This box is for the Public and Private keys display */}
 
                 {/* Contains the netork dropdown (LHS) and The balance (RHS) */}
@@ -296,7 +337,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                       padding: "8px",
                       borderRadius: "4px",
                       width: "40%",
-                      border: "2px solid grey",
+                      // border: "2px solid grey",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -363,7 +404,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                   {/* Grand Child Box 2 */}
                   <Box
                     sx={{
-                      border: "2px solid grey",
+                      // border: "2px solid grey",
                       padding: "16px",
                       borderRadius: "4px",
                       width: "60%",
@@ -393,20 +434,343 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                           fontSize: "1.5rem",
                         }}
                       >
-                        <img
-                          src={SolanaLogo}
-                          alt="Solana"
-                          style={{
-                            width: 70,
-                            height: 70,
-                          }}
-                        />
                         {solBalance !== null ? `${solBalance} SOL` : "......"}
                       </Typography>
                     </Tooltip>
                   </Box>
                 </Box>
                 {/* END: Contains the netork dropdown (LHS) and The balance (RHS) */}
+
+                {/* Send transaction feature */}
+                <Box
+                  sx={{
+                    margin: "25px",
+                    padding: "10px",
+                    border: "2px solid grey",
+                    boxShadow: "0px 4px 12px rgba(255, 255, 255, 0.4)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    height: "400px",
+                  }}
+                >
+                  {transactionStep === "send" ? (
+                    <>
+                      <Typography
+                        sx={{
+                          color: "#ffcb2d",
+                          fontSize: "1.5rem",
+                          fontWeight: "bold",
+                          marginBottom: "16px",
+                          textShadow: "1px 1px 4px rgba(255, 255, 255, 0.2)",
+                        }}
+                      >
+                        Send SOL
+                      </Typography>
+                      <img
+                        src={SolanaLogo}
+                        alt="Solana"
+                        style={{
+                          width: 80,
+                          height: 80,
+                          marginBottom: "16px",
+                          filter:
+                            "drop-shadow(0px 4px 8px rgba(255, 255, 255, 0.4))",
+                        }}
+                      />
+
+                      <TextField
+                        placeholder={`Recipient's Solana ${selectedNetwork} address`}
+                        variant="outlined"
+                        fullWidth
+                        value={recipientAddress}
+                        onChange={(e) => {
+                          const address = e.target.value;
+                          setRecipientAddress(address);
+                          setIsAddressValid(validateSolanaAddress(address));
+                        }}
+                        error={!isAddressValid && recipientAddress !== ""}
+                        helperText={
+                          !isAddressValid && recipientAddress !== ""
+                            ? "Invalid Solana address"
+                            : ""
+                        }
+                        sx={{
+                          marginBottom: "16px",
+                          "& .MuiInputBase-input": { color: "#e0e0e0" },
+                          "& .MuiOutlinedInput-root": {
+                            "& fieldset": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                            "&:hover fieldset": {
+                              borderColor: "rgba(255, 255, 255, 0.7)",
+                            },
+                            "&.Mui-focused fieldset": {
+                              borderColor: "#ffcb2d",
+                            },
+                          },
+                          "& .MuiFormLabel-root": { color: "#e0e0e0" },
+                          "& .MuiFormLabel-root.Mui-focused": {
+                            color: "#ffcb2d",
+                          },
+                          "& .MuiFormHelperText-root": {
+                            color: "red",
+                          },
+                        }}
+                        InputProps={{
+                          sx: {
+                            "&::placeholder": {
+                              color: "#e0e0e0",
+                              opacity: 1,
+                            },
+                            color: "#e0e0e0",
+                          },
+                        }}
+                      />
+
+                      <TextField
+                        placeholder="Amount"
+                        value={amount}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            setAmount(value);
+                            const numericValue = parseFloat(value);
+                            setIsAmountValid(numericValue <= (solBalance || 0));
+                          }
+                        }}
+                        fullWidth
+                        variant="outlined"
+                        error={!isAmountValid && amount !== ""}
+                        helperText={
+                          !isAmountValid && amount !== ""
+                            ? "Insufficient Balance"
+                            : ""
+                        }
+                        sx={{
+                          marginBottom: "16px",
+                          "& .MuiInputBase-input": { color: "#e0e0e0" },
+                          "& .MuiOutlinedInput-root": {
+                            "& fieldset": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                            "&:hover fieldset": {
+                              borderColor: "rgba(255, 255, 255, 0.7)",
+                            },
+                            "&.Mui-focused fieldset": {
+                              borderColor: "#ffcb2d",
+                            },
+                          },
+                          "& .MuiFormLabel-root": { color: "#e0e0e0" },
+                          "& .MuiFormLabel-root.Mui-focused": {
+                            color: "#ffcb2d",
+                          },
+                          "& .MuiFormHelperText-root": {
+                            color: "red",
+                          },
+                        }}
+                      />
+
+                      <Box
+                        sx={{ display: "flex", gap: "16px", marginTop: "16px" }}
+                      >
+                        <Button
+                          variant="outlined"
+                          onClick={handleClose}
+                          sx={{
+                            borderColor: "#ffcb2d",
+                            color: "#ffcb2d",
+                            "&:hover": {
+                              borderColor: "#ffcb2d",
+                              backgroundColor: "rgba(255, 203, 45, 0.1)",
+                            },
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="contained"
+                          onClick={() => setTransactionStep("sending")}
+                          disabled={!isAmountValid || !isAddressValid}
+                          sx={{
+                            backgroundColor: "#ffcb2d",
+                            color: "#1e1e1e",
+                            "&:hover": {
+                              backgroundColor: "rgba(255, 203, 45, 0.9)",
+                            },
+                          }}
+                        >
+                          Next
+                        </Button>
+                      </Box>
+                    </>
+                  ) : (
+                    <>
+                      <Box
+                        sx={{
+                          margin: "25px",
+                          padding: "20px",
+                          border: "2px solid rgba(255, 255, 255, 0.3)",
+                          borderRadius: "12px",
+                          boxShadow: "0px 8px 20px rgba(0, 0, 0, 0.6)",
+                          backgroundColor: "#1e1e1e",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "auto",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: "#ffcb2d",
+                            fontSize: "1.5rem",
+                            fontWeight: "bold",
+                            marginBottom: "16px",
+                            textShadow: "1px 1px 4px rgba(255, 255, 255, 0.2)",
+                          }}
+                        >
+                          Confirm Send
+                        </Typography>
+                        <SendIcon
+                          sx={{
+                            color: "#ffcb2d",
+                            fontSize: "3rem",
+                            marginBottom: "16px",
+                          }}
+                        />
+                        <Typography
+                          sx={{
+                            color: "rgba(255, 255, 255, 0.8)",
+                            fontSize: "1.2rem",
+                            marginBottom: "8px",
+                            textShadow: "1px 1px 4px rgba(0, 0, 0, 0.5)",
+                          }}
+                        >
+                          Amount:{" "}
+                          <span style={{ color: "#ffcb2d" }}>{amount} SOL</span>
+                        </Typography>
+                        <Typography
+                          sx={{
+                            color: "rgba(255, 255, 255, 0.8)",
+                            fontSize: "1.2rem",
+                            marginBottom: "8px",
+                            textShadow: "1px 1px 4px rgba(0, 0, 0, 0.5)",
+                          }}
+                        >
+                          To Address:{" "}
+                          <span style={{ color: "#ffcb2d" }}>
+                            {recipientAddress}
+                          </span>
+                        </Typography>
+                        <Typography
+                          sx={{
+                            color: "rgba(255, 255, 255, 0.8)",
+                            fontSize: "1.2rem",
+                            marginBottom: "16px",
+                            textShadow: "1px 1px 4px rgba(0, 0, 0, 0.5)",
+                          }}
+                        >
+                          Network:{" "}
+                          <span style={{ color: "#ffcb2d" }}>
+                            {selectedNetwork}
+                          </span>
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ display: "flex", gap: "16px" }}>
+                        <Button
+                          variant="outlined"
+                          onClick={() => setTransactionStep("send")}
+                          sx={{
+                            borderColor: "#ffcb2d",
+                            color: "#ffcb2d",
+                            "&:hover": {
+                              borderColor: "#ffcb2d",
+                              backgroundColor: "rgba(255, 203, 45, 0.1)",
+                            },
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          onClick={() => {
+                            if (transactionStep === "sending") {
+                              setIsLoading(true);
+                              setTransactionStatus(null);
+                              try {
+                                const wallet = wallets[openIndex!];
+                                sendTransaction(
+                                  recipientAddress,
+                                  parseFloat(amount),
+                                  wallet.privateKey,
+                                  selectedNetwork
+                                );
+                                setTransactionStatus("success");
+
+                                setTimeout(() => {
+                                  setRecipientAddress("");
+                                  setAmount("");
+                                  setIsAddressValid(true);
+                                  setIsAmountValid(true);
+                                  setTransactionStep("send");
+                                  setTransactionStatus(null);
+                                  setSelectedNetwork("Mainnet");
+                                }, 3000);
+                              } catch (error) {
+                                setTransactionStatus("error");
+                                setIsLoading(false);
+                                setTimeout(() => {
+                                  setRecipientAddress("");
+                                  setAmount("");
+                                  setIsAddressValid(true);
+                                  setIsAmountValid(true);
+                                  setTransactionStep("send");
+                                  setTransactionStatus(null);
+                                  setSelectedNetwork("Mainnet");
+                                }, 2000);
+                              } finally {
+                                if (transactionStatus !== "success") {
+                                  setIsLoading(false);
+                                }
+                              }
+                            }
+                          }}
+                        >
+                          {isLoading ? (
+                            <CircularProgress size={24} color="inherit" />
+                          ) : transactionStatus === "success" ? (
+                            <CheckCircleIcon color="success" />
+                          ) : transactionStatus === "error" ? (
+                            <CancelIcon color="error" />
+                          ) : (
+                            "Send"
+                          )}
+                        </Button>
+
+                        {transactionStatus && (
+                          <Typography
+                            sx={{
+                              color:
+                                transactionStatus === "success"
+                                  ? "green"
+                                  : "red",
+                              fontSize: "1rem",
+                              marginTop: "10px",
+                            }}
+                          >
+                            {transactionStatus === "success"
+                              ? "Transaction Successful!"
+                              : "Transaction Failed. Please try again."}
+                          </Typography>
+                        )}
+                      </Box>
+                    </>
+                  )}
+                </Box>
               </Box>
             </Modal>
           </React.Fragment>
