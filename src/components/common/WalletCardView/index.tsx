@@ -19,6 +19,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Modal from "@mui/material/Modal";
 import { getBalance } from "../utils";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import SolanaLogo from "/src/assets/solana-cdn.svg";
 
 interface Wallet {
   publicKey: string;
@@ -40,6 +41,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
   toggleVisibility,
   coinType,
 }) => {
+  const solToUsdRate = 132.07;
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [balances, setBalances] = useState<Map<string, Map<string, number>>>(
     new Map()
@@ -219,7 +221,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                   <CloseIcon />
                 </IconButton>
 
-                {/* Child1 : This box is for the Public and Private keys display */}
+                {/* This box is for the Public and Private keys display */}
                 <Box
                   sx={{
                     margin: "25px",
@@ -277,39 +279,9 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                     </IconButton>
                   </Box>
                 </Box>
-                {/*Child 1 END */}
+                {/* END: This box is for the Public and Private keys display */}
 
-                {/* Select Network Mainnet/Devnet */}
-                <Box
-                  sx={{
-                    margin: "25px",
-                  }}
-                >
-                  <FormControl variant="outlined" sx={{ minWidth: 120 }}>
-                    <InputLabel
-                      id="network-select-label"
-                      sx={{ color: "white" }}
-                    >
-                      Network
-                    </InputLabel>
-                    <Select
-                      labelId="network-select-label"
-                      id="network-select"
-                      value={selectedNetwork}
-                      onChange={handleNetworkChange}
-                      label="Network"
-                      sx={{
-                        color: "white",
-                        borderColor: "white",
-                        "& .MuiSvgIcon-root": { color: "white" },
-                      }}
-                    >
-                      <MenuItem value="Mainnet">Mainnet</MenuItem>
-                      <MenuItem value="Devnet">Devnet</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-                {/* Child 2: This contains 2 boxes.  */}
+                {/* Contains the netork dropdown (LHS) and The balance (RHS) */}
                 <Box
                   sx={{
                     margin: "25px",
@@ -325,31 +297,116 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                       borderRadius: "4px",
                       width: "40%",
                       border: "2px solid grey",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <Tooltip title={`Lamports: ${lamportBalance}`} arrow>
-                      <Typography sx={{ color: "white" }}>
-                        {solBalance !== null
-                          ? `$ ${(solBalance || 0).toFixed(4)} SOL`
-                          : "Loading..."}
-                      </Typography>
-                    </Tooltip>
+                    <FormControl
+                      variant="outlined"
+                      sx={{
+                        width: "100%",
+                        "& .MuiInputBase-root": {
+                          height: "100%",
+                        },
+                      }}
+                    >
+                      <InputLabel
+                        id="network-select-label"
+                        sx={{
+                          color: "white",
+                          "&.Mui-focused": {
+                            color: "white",
+                          },
+                        }}
+                      >
+                        Network
+                      </InputLabel>
+                      <Select
+                        labelId="network-select-label"
+                        id="network-select"
+                        value={selectedNetwork}
+                        onChange={handleNetworkChange}
+                        label="Network"
+                        sx={{
+                          color: "white",
+                          borderColor: "white",
+                          "& .MuiOutlinedInput-root": {
+                            "& fieldset": {
+                              borderColor: "white",
+                            },
+                            "&:hover fieldset": {
+                              borderColor: "grey",
+                            },
+                            "&.Mui-focused fieldset": {
+                              borderColor: "lightgrey",
+                            },
+                          },
+                          "& .MuiSvgIcon-root": {
+                            color: "white",
+                          },
+                          "& .MuiSelect-select": {
+                            backgroundColor: "#333",
+                            borderRadius: "4px",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                        }}
+                      >
+                        <MenuItem value="Mainnet">Mainnet</MenuItem>
+                        <MenuItem value="Devnet">Devnet</MenuItem>
+                      </Select>
+                    </FormControl>
                   </Box>
 
                   {/* Grand Child Box 2 */}
                   <Box
                     sx={{
                       border: "2px solid grey",
-                      padding: "8px",
+                      padding: "16px",
                       borderRadius: "4px",
                       width: "60%",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <Typography sx={{ color: "white", alignItems: "center" }}>
-                      Child Box 2 Content
+                    <Typography
+                      sx={{
+                        color: "white",
+                        fontSize: "1rem",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {solBalance !== null
+                        ? `$ ${(solBalance * solToUsdRate).toFixed(2)}`
+                        : "......"}
                     </Typography>
+                    <Tooltip title={`Lamports: ${lamportBalance}`} arrow>
+                      <Typography
+                        sx={{
+                          color: "white",
+                          display: "flex",
+                          alignItems: "center",
+                          fontSize: "1.5rem",
+                        }}
+                      >
+                        <img
+                          src={SolanaLogo}
+                          alt="Solana"
+                          style={{
+                            width: 70,
+                            height: 70,
+                          }}
+                        />
+                        {solBalance !== null ? `${solBalance} SOL` : "......"}
+                      </Typography>
+                    </Tooltip>
                   </Box>
                 </Box>
+                {/* END: Contains the netork dropdown (LHS) and The balance (RHS) */}
               </Box>
             </Modal>
           </React.Fragment>
