@@ -2,7 +2,7 @@ import { mnemonicToSeedSync } from "bip39"
 import { Wallet, HDNodeWallet } from "ethers";
 import { derivePath } from "ed25519-hd-key"
 import nacl from "tweetnacl";
-import { Keypair } from "@solana/web3.js";
+import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction} from "@solana/web3.js";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
 import axios from "axios";
@@ -78,3 +78,66 @@ export const getBalance = async ({ publicKey, method, url, coinType }: GetBalanc
   if (coinType === "Ethereum") return data.result;  
 
 }
+
+
+export const validateSolanaAddress = (address: string) => {
+  try {
+    new PublicKey(address);
+    return true; 
+  } catch (e) {
+    return false;
+  }
+};
+
+export const sendTransaction = async (
+  recipientAddress: string,
+  amount: number,
+  walletPrivateKey: string,
+  selectedNetwork: string
+): Promise<string> => {
+  try {
+   
+    const apiUrl =
+      selectedNetwork === "Mainnet"
+        ? import.meta.env.VITE_APP_SOLANA_MAINNET_API_URL
+        : import.meta.env.VITE_APP_SOLANA_DEVNET_API_URL;
+
+    // Create a connection to the cluster
+    const connection = new Connection(apiUrl, "confirmed");
+
+    // Decode the wallet private key and create a Keypair
+    const privateKey = new Uint8Array(bs58.decode(walletPrivateKey));
+    const fromKeypair = Keypair.fromSecretKey(privateKey);
+
+    console.log("KeyPair:", fromKeypair);
+
+    // Create a transaction to transfer SOL
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: fromKeypair.publicKey,
+        toPubkey: new PublicKey(recipientAddress),
+        lamports: amount * LAMPORTS_PER_SOL,
+      })
+    );
+
+    console.log("Transaction:", transaction);
+
+    // Send and confirm the transaction
+    const signature = await sendAndConfirmTransaction(connection, transaction, [fromKeypair], {
+      skipPreflight: false,
+      preflightCommitment: "confirmed",
+    });
+
+    console.log("Transaction successful with signature:", signature);
+
+    return "Transaction successful!";
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("TransactionExpiredBlockheightExceededError")) {
+      console.warn("Transaction expired, but may still be successful.");
+      return "Transaction may be successful. Please check the transaction status.";
+    } else {
+      console.error("Transaction failed:", error);
+      throw error;
+    }
+  }
+};
