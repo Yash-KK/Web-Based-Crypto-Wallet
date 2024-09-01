@@ -1,10 +1,24 @@
-import React, { useState } from "react";
-import { Card, CardContent, Typography, IconButton, Box } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  Typography,
+  IconButton,
+  Box,
+  Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+} from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Modal from "@mui/material/Modal";
+import { getBalance } from "../utils";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 interface Wallet {
   publicKey: string;
@@ -16,7 +30,6 @@ interface WalletCardViewListProps {
   visibleKeys: boolean[];
   handleDeleteClick: (index: number) => void;
   toggleVisibility: (index: number) => void;
-  // balances: { sol?: number; eth?: number; lamports?: number; wei?: number }[];
   coinType: "Solana" | "Ethereum";
 }
 
@@ -25,21 +38,73 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
   visibleKeys,
   handleDeleteClick,
   toggleVisibility,
+  coinType,
 }) => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [balances, setBalances] = useState<Map<string, Map<string, number>>>(
+    new Map()
+  );
+
+  const [selectedNetwork, setSelectedNetwork] = useState<string>("Mainnet");
+  const handleNetworkChange = (event: SelectChangeEvent<string>) => {
+    setSelectedNetwork(event.target.value as string);
+  };
+
+  const handleOpen = async (index: number) => {
+    try {
+      const wallet = wallets[index];
+      const cacheKey = wallet.publicKey;
+
+      const apiUrl =
+        selectedNetwork === "Mainnet"
+          ? import.meta.env.VITE_APP_SOLANA_MAINNET_API_URL
+          : import.meta.env.VITE_APP_SOLANA_DEVNET_API_URL;
+
+      // Fetch balance
+      const lamportBalance = await getBalance({
+        publicKey: wallet.publicKey,
+        method: "getBalance",
+        url: apiUrl,
+        coinType: coinType,
+      });
+      console.log("lamport Balance: ", lamportBalance);
+      const solBalance = lamportBalance / LAMPORTS_PER_SOL;
+      const newBalances = new Map(balances);
+      newBalances.set(
+        cacheKey,
+        new Map([
+          ["lamport", lamportBalance],
+          ["sol", solBalance],
+        ])
+      );
+
+      setBalances(newBalances);
+      setOpenIndex(index);
+    } catch (error) {
+      console.error("Error fetching balance:", error);
+    }
+  };
+
+  const handleClose = () => {
+    setOpenIndex(null);
+  };
+
+  useEffect(() => {
+    if (openIndex !== null) {
+      handleOpen(openIndex);
+    }
+  }, [selectedNetwork]);
+
   return (
     <Box my={4} alignItems="center" gap={4}>
       {wallets.map((wallet, index) => {
-        const [open, setOpen] = useState<boolean>(false);
-        const handleOpen = () => {
-          setOpen(true);
-        };
-        const handleClose = () => {
-          setOpen(false);
-        };
+        const balance = balances.get(wallet.publicKey);
+        const lamportBalance = balance?.get("lamport") ?? null;
+        const solBalance = balance?.get("sol") ?? null;
+
         return (
-          <>
+          <React.Fragment key={index}>
             <Card
-              key={index}
               sx={{
                 margin: "16px 0",
                 padding: "16px",
@@ -48,7 +113,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                 boxShadow: "0px 4px 12px rgba(255, 255, 255, 0.4)",
                 position: "relative",
               }}
-              onClick={handleOpen}
+              onClick={() => handleOpen(index)}
             >
               <CardContent>
                 <Typography
@@ -65,7 +130,10 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                   Wallet {index + 1}
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <IconButton
-                      onClick={() => handleDeleteClick(index)}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleDeleteClick(index);
+                      }}
                       sx={{
                         "&:hover": {
                           backgroundColor: "rgba(255, 0, 0, 0.1)",
@@ -101,7 +169,10 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                         : "****************************************************************************************"}
                     </Typography>
                     <IconButton
-                      onClick={() => toggleVisibility(index)}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        toggleVisibility(index);
+                      }}
                       sx={{
                         color: "white",
                         position: "absolute",
@@ -116,11 +187,12 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                 </Box>
               </CardContent>
             </Card>
-            <Modal open={open} onClose={handleClose}>
-              {/* Parent Box  */}
+
+            {/* Wallet details modal */}
+            <Modal open={openIndex === index} onClose={handleClose}>
               <Box
                 sx={{
-                  position: "absolute" as "absolute",
+                  position: "absolute",
                   top: "50%",
                   left: "50%",
                   transform: "translate(-50%, -50%)",
@@ -205,8 +277,38 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                     </IconButton>
                   </Box>
                 </Box>
-                {/*Child 1 END:  This box is for the Public and Private keys display */}
+                {/*Child 1 END */}
 
+                {/* Select Network Mainnet/Devnet */}
+                <Box
+                  sx={{
+                    margin: "25px",
+                  }}
+                >
+                  <FormControl variant="outlined" sx={{ minWidth: 120 }}>
+                    <InputLabel
+                      id="network-select-label"
+                      sx={{ color: "white" }}
+                    >
+                      Network
+                    </InputLabel>
+                    <Select
+                      labelId="network-select-label"
+                      id="network-select"
+                      value={selectedNetwork}
+                      onChange={handleNetworkChange}
+                      label="Network"
+                      sx={{
+                        color: "white",
+                        borderColor: "white",
+                        "& .MuiSvgIcon-root": { color: "white" },
+                      }}
+                    >
+                      <MenuItem value="Mainnet">Mainnet</MenuItem>
+                      <MenuItem value="Devnet">Devnet</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
                 {/* Child 2: This contains 2 boxes.  */}
                 <Box
                   sx={{
@@ -221,22 +323,17 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                     sx={{
                       padding: "8px",
                       borderRadius: "4px",
-                      width: "100%",
+                      width: "40%",
                       border: "2px solid grey",
                     }}
                   >
-                    <Typography sx={{ color: "white" }}>
-                      Child Box 1 Content
-                    </Typography>
-                    <Typography sx={{ color: "white" }}>
-                      Child Box 1 Content
-                    </Typography>
-                    <Typography sx={{ color: "white" }}>
-                      Child Box 1 Content
-                    </Typography>
-                    <Typography sx={{ color: "white" }}>
-                      Child Box 1 Content
-                    </Typography>
+                    <Tooltip title={`Lamports: ${lamportBalance}`} arrow>
+                      <Typography sx={{ color: "white" }}>
+                        {solBalance !== null
+                          ? `$ ${(solBalance || 0).toFixed(4)} SOL`
+                          : "Loading..."}
+                      </Typography>
+                    </Tooltip>
                   </Box>
 
                   {/* Grand Child Box 2 */}
@@ -245,7 +342,7 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                       border: "2px solid grey",
                       padding: "8px",
                       borderRadius: "4px",
-                      width: "100%",
+                      width: "60%",
                     }}
                   >
                     <Typography sx={{ color: "white", alignItems: "center" }}>
@@ -254,10 +351,8 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                   </Box>
                 </Box>
               </Box>
-
-              {/* Child 2 END */}
             </Modal>
-          </>
+          </React.Fragment>
         );
       })}
     </Box>
