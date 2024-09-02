@@ -2,7 +2,7 @@ import { mnemonicToSeedSync } from "bip39"
 import { Wallet, HDNodeWallet } from "ethers";
 import { derivePath } from "ed25519-hd-key"
 import nacl from "tweetnacl";
-import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction} from "@solana/web3.js";
+import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
 import axios from "axios";
@@ -75,7 +75,7 @@ export const getBalance = async ({ publicKey, method, url, coinType }: GetBalanc
   );
 
   if (coinType === "Solana") return data.result.value;
-  if (coinType === "Ethereum") return data.result;  
+  if (coinType === "Ethereum") return data.result;
 
 }
 
@@ -83,61 +83,124 @@ export const getBalance = async ({ publicKey, method, url, coinType }: GetBalanc
 export const validateSolanaAddress = (address: string) => {
   try {
     new PublicKey(address);
-    return true; 
+    return true;
   } catch (e) {
     return false;
   }
 };
+
+// export const sendTransaction = async (
+//   recipientAddress: string,
+//   amount: number,
+//   walletPrivateKey: string,
+//   selectedNetwork: string
+// ) => {
+//   const apiUrl =
+//     selectedNetwork === "Mainnet"
+//       ? import.meta.env.VITE_APP_SOLANA_MAINNET_API_URL
+//       : import.meta.env.VITE_APP_SOLANA_DEVNET_API_URL;
+
+//   const privateKey = new Uint8Array(bs58.decode(walletPrivateKey));
+//   const fromKeypair = Keypair.fromSecretKey(privateKey);
+
+//   const connection = new Connection(
+//     apiUrl,
+//     "confirmed"
+//   );
+
+//   (async () => {
+//     const transaction = new Transaction().add(
+//       SystemProgram.transfer({
+//         fromPubkey: fromKeypair.publicKey,
+//         toPubkey: new PublicKey(recipientAddress),
+//         lamports: amount * LAMPORTS_PER_SOL
+//       })
+//     )
+
+//     const signature = await sendAndConfirmTransaction(
+//       connection,
+//       transaction,
+//       [fromKeypair]
+//     )
+//     console.log("SIGNATURE: ", signature);
+//     return signature;
+
+//   })()
+
+// };
 
 export const sendTransaction = async (
   recipientAddress: string,
   amount: number,
   walletPrivateKey: string,
   selectedNetwork: string
-): Promise<string> => {
-  try {
-   
-    const apiUrl =
-      selectedNetwork === "Mainnet"
-        ? import.meta.env.VITE_APP_SOLANA_MAINNET_API_URL
-        : import.meta.env.VITE_APP_SOLANA_DEVNET_API_URL;
+) => {
+  console.log("Entered Send Transaction")
+  const apiUrl =
+    selectedNetwork === "Mainnet"
+      ? import.meta.env.VITE_APP_SOLANA_MAINNET_API_URL
+      : import.meta.env.VITE_APP_SOLANA_DEVNET_API_URL;
 
-    // Create a connection to the cluster
-    const connection = new Connection(apiUrl, "confirmed");
+  const connection = new Connection(
+    apiUrl,
+    "confirmed"
+  );
+  const privateKey = bs58.decode(walletPrivateKey);
+  const fromKeypair = Keypair.fromSecretKey(privateKey);
 
-    // Decode the wallet private key and create a Keypair
-    const privateKey = new Uint8Array(bs58.decode(walletPrivateKey));
-    const fromKeypair = Keypair.fromSecretKey(privateKey);
 
-    console.log("KeyPair:", fromKeypair);
+  // (async () => {
+  //   const transaction = new Transaction().add(
+  //     SystemProgram.transfer({
+  //       fromPubkey: fromKeypair.publicKey,
+  //       toPubkey: new PublicKey(recipientAddress),
+  //       lamports: amount * LAMPORTS_PER_SOL
+  //     })
+  //   )
 
-    // Create a transaction to transfer SOL
-    const transaction = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: fromKeypair.publicKey,
-        toPubkey: new PublicKey(recipientAddress),
-        lamports: amount * LAMPORTS_PER_SOL,
-      })
-    );
+  //   const signature = await sendAndConfirmTransaction(
+  //     connection,
+  //     transaction,
+  //     [fromKeypair]
+  //   )
+  //   console.log("SIGNATURE: ", signature);
+  //   return signature;
 
-    console.log("Transaction:", transaction);
+  // })()
 
-    // Send and confirm the transaction
+  const transaction = new Transaction();
+  console.log("Transaction: ", transaction);
+  const sendSolTransaction = SystemProgram.transfer({
+    fromPubkey: fromKeypair.publicKey,
+    toPubkey: new PublicKey(recipientAddress),
+    lamports: amount * LAMPORTS_PER_SOL
+  })
+
+
+  console.log("sendSolTransaction: ", sendSolTransaction);
+  transaction.add(sendSolTransaction);
+
+  // Fetech recent blockhash and set it for the transaction
+  const { blockhash } = await connection.getLatestBlockhash();
+  console.log("blockhash: ", blockhash);
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = fromKeypair.publicKey
+
+  transaction.sign(fromKeypair);
+  
+  console.log("transaction: ", transaction)
+  try{
+    console.log("About to trigger sendAndConfirmTransaction")
     const signature = await sendAndConfirmTransaction(connection, transaction, [fromKeypair], {
-      skipPreflight: false,
-      preflightCommitment: "confirmed",
-    });
-
-    console.log("Transaction successful with signature:", signature);
-
-    return "Transaction successful!";
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("TransactionExpiredBlockheightExceededError")) {
-      console.warn("Transaction expired, but may still be successful.");
-      return "Transaction may be successful. Please check the transaction status.";
-    } else {
-      console.error("Transaction failed:", error);
-      throw error;
-    }
+      commitment: "processed",
+      preflightCommitment: "processed"
+    })
+    console.log("Transaction signature: ", signature);
+    return signature
+  } catch(err){
+    console.error("Transaction Failer: ", err);
+    throw err;
   }
+
 };
+
