@@ -24,8 +24,6 @@ import Modal from "@mui/material/Modal";
 import { getBalance, sendTransaction, validateSolanaAddress } from "../utils";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import SolanaLogo from "/src/assets/solana-cdn.svg";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
 interface Wallet {
   publicKey: string;
   privateKey: string;
@@ -129,7 +127,6 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
   }, [selectedNetwork]);
 
   useEffect(() => {
-    // Revalidate amount whenever balance or amount changes
     const numericValue = parseFloat(amount);
     const balance = balances.get(wallets[openIndex ?? 0]?.publicKey);
     const solBalance = balance?.get("sol") || 0;
@@ -682,7 +679,16 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                       <Box sx={{ display: "flex", gap: "16px" }}>
                         <Button
                           variant="outlined"
-                          onClick={() => setTransactionStep("send")}
+                          onClick={() => {
+                            setTransactionStep("send");
+                            setRecipientAddress("");
+                            setAmount("");
+                            setIsAddressValid(true);
+                            setIsAmountValid(true);
+                            setTransactionStep("send");
+                            setTransactionStatus(null);
+                            setSelectedNetwork("Mainnet");
+                          }}
                           sx={{
                             borderColor: "#ffcb2d",
                             color: "#ffcb2d",
@@ -697,13 +703,13 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                         <Button
                           variant="contained"
                           color="secondary"
-                          onClick={() => {
+                          onClick={async () => {
                             if (transactionStep === "sending") {
                               setIsLoading(true);
                               setTransactionStatus(null);
                               try {
                                 const wallet = wallets[openIndex!];
-                                sendTransaction(
+                                await sendTransaction(
                                   recipientAddress,
                                   parseFloat(amount),
                                   wallet.privateKey,
@@ -719,10 +725,9 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                                   setTransactionStep("send");
                                   setTransactionStatus(null);
                                   setSelectedNetwork("Mainnet");
-                                }, 3000);
+                                }, 2000);
                               } catch (error) {
                                 setTransactionStatus("error");
-                                setIsLoading(false);
                                 setTimeout(() => {
                                   setRecipientAddress("");
                                   setAmount("");
@@ -733,40 +738,27 @@ const WalletCardViewList: React.FC<WalletCardViewListProps> = ({
                                   setSelectedNetwork("Mainnet");
                                 }, 2000);
                               } finally {
-                                if (transactionStatus !== "success") {
-                                  setIsLoading(false);
-                                }
+                                setTimeout(() => {
+                                  setRecipientAddress("");
+                                  setAmount("");
+                                  setIsAddressValid(true);
+                                  setIsAmountValid(true);
+                                  setTransactionStep("send");
+                                  setTransactionStatus(null);
+                                  setSelectedNetwork("Mainnet");
+                                }, 2000);
+                                setIsLoading(false);
                               }
                             }
                           }}
+                          disabled={isLoading}
                         >
                           {isLoading ? (
-                            <CircularProgress size={24} color="inherit" />
-                          ) : transactionStatus === "success" ? (
-                            <CheckCircleIcon color="success" />
-                          ) : transactionStatus === "error" ? (
-                            <CancelIcon color="error" />
+                            <CircularProgress size={24} color="success" />
                           ) : (
                             "Send"
                           )}
                         </Button>
-
-                        {transactionStatus && (
-                          <Typography
-                            sx={{
-                              color:
-                                transactionStatus === "success"
-                                  ? "green"
-                                  : "red",
-                              fontSize: "1rem",
-                              marginTop: "10px",
-                            }}
-                          >
-                            {transactionStatus === "success"
-                              ? "Transaction Successful!"
-                              : "Transaction Failed. Please try again."}
-                          </Typography>
-                        )}
                       </Box>
                     </>
                   )}
